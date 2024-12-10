@@ -26,7 +26,7 @@ In your `build.gradle` file, add the following dependency:
 
 ```gradle
 dependencies {
-     implementation ("com.github.Radzdevteam:radzupdater:1.0")
+     implementation ("com.github.Radzdevteam:updater:1.0")
 }
 ```
 
