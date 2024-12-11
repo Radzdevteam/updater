@@ -81,4 +81,3 @@ Create a file named `provider_paths.xml` under `res/xml/` directory and add the 
 
 - Ensure your app has permission to access the internet, write to external storage, and request package installation to allow seamless updates.
 - The `updater` function checks for updates from the provided URL and automatically handles the update process.
-```
