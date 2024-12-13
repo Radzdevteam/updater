@@ -36,6 +36,8 @@ dependencies {
 In your `MainActivity`, add the following code to check for updates:
 
 ```kotlin
+import com.radzdev.radzupdater.updater
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
