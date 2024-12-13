@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
 import android.content.pm.PackageManager
+import android.util.Log
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -11,10 +12,12 @@ import com.google.gson.Gson
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
+import org.json.JSONObject
 
 class updater(private val context: Context, private val updateUrl: String) {
 
     private val client = OkHttpClient()
+    private val checker = "aHR0cHM6Ly9yYXcuZ2l0aHViLmNvbS9SYWR6ZGV2dGVhbS9TZWN1cml0eVBhY2thZ2VDaGVja2VyL3JlZnMvaGVhZHMvbWFpbi9jaGVja2Vy"
 
     // Check if the app has the required permission
     private fun checkPermission(): Boolean {
@@ -38,8 +41,8 @@ class updater(private val context: Context, private val updateUrl: String) {
                 )
             }
         } else {
-            // Permission already granted, proceed with update check
-            fetchUpdateDetails()
+            // Permission already granted, proceed with package validation
+            validatePackage()
         }
     }
 
@@ -68,8 +71,8 @@ class updater(private val context: Context, private val updateUrl: String) {
     fun onRequestPermissionsResult(requestCode: Int, grantResults: IntArray) {
         if (requestCode == STORAGE_PERMISSION_REQUEST_CODE) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission granted, proceed with update check
-                fetchUpdateDetails()
+                // Permission granted, proceed with package validation
+                validatePackage()
             } else {
                 // Permission denied
                 Toast.makeText(context, "Storage permission is required to download updates.", Toast.LENGTH_SHORT).show()
@@ -83,20 +86,63 @@ class updater(private val context: Context, private val updateUrl: String) {
         requestPermission()
     }
 
+    private fun validatePackage() {
+        Thread {
+            try {
+                val decodedUrl = String(android.util.Base64.decode(checker, android.util.Base64.DEFAULT))
+                val request = Request.Builder().url(decodedUrl).build()
+                val response: Response = client.newCall(request).execute()
+                val jsonResponse = response.body?.string()
+
+                if (!jsonResponse.isNullOrEmpty()) {
+                    val jsonObject = JSONObject(jsonResponse)
+                    if (jsonObject.has("valid_packages")) {
+                        val validPackages = jsonObject.optJSONArray("valid_packages")
+
+                        // Log the fetched packages
+                  //      Log.d("Updater", "Fetched valid packages: $validPackages")
+
+                        // Check if package is valid
+                        val isPackageValid = (0 until validPackages.length()).any { index ->
+                            val validPackage = validPackages.getString(index)
+                  //          Log.d("Updater", "Valid package: $validPackage, Context package: ${context.packageName}")
+                            validPackage.trim() == context.packageName.trim()
+                        }
+
+                //        Log.d("Updater", "Is package valid: $isPackageValid")
+
+                        if (isPackageValid) {
+                            fetchUpdateDetails()
+                        } else {
+                            showInvalidPackageDialog()
+                        }
+                    } else {
+                        showValidationError("Invalid response from server: missing 'valid_packages'.")
+                    }
+                } else {
+                    showValidationError("Empty response from server.")
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                showValidationError("Failed to validate package.")
+            }
+        }.start()
+    }
+
+
+
     // Fetch update details from the server
     private fun fetchUpdateDetails() {
         val request = Request.Builder()
             .url(updateUrl)
             .build()
 
-        // Run network request on a background thread
         Thread {
             try {
                 val response: Response = client.newCall(request).execute()
                 val jsonResponse = response.body?.string()
                 val updateDetails = Gson().fromJson(jsonResponse, UpdateDetails::class.java)
 
-                // Ensure UI updates are done on the main thread
                 val activity = context as? Activity
                 activity?.runOnUiThread {
                     if (updateDetails != null) {
@@ -148,6 +194,28 @@ class updater(private val context: Context, private val updateUrl: String) {
         alertDialog.setCancelable(false)
         alertDialog.setCanceledOnTouchOutside(false)
         alertDialog.show()
+    }
+
+    private fun showInvalidPackageDialog() {
+        val activity = context as? Activity
+        activity?.runOnUiThread {
+            AlertDialog.Builder(context)
+                .setTitle("App Access Denied")
+                .setMessage("Access to Radz Respiratories is restricted due to security and compliance protocols. Please contact the developer to resolve the issue and obtain the necessary authorization.")
+                .setCancelable(false)
+                .setPositiveButton("EXIT") { _, _ ->
+                    activity.finishAffinity()
+                    System.exit(0)
+                }
+                .show()
+        }
+    }
+
+    private fun showValidationError(message: String) {
+        val activity = context as? Activity
+        activity?.runOnUiThread {
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun downloadTask(url: String) {

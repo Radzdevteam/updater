@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.radzdev.radzupdater
 
 import android.app.ProgressDialog
