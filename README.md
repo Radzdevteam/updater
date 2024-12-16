@@ -80,6 +80,17 @@ Create a file named `provider_paths.xml` under `res/xml/` directory and add the 
 </paths>
 ```
 
+### JSON Format
+```json
+{
+  "latestVersion": "2.0.1",
+  "url": "https://github.com/Radzdevteam/test/raw/refs/heads/main/test.apk",
+  "releaseNotes": [
+    "- Bug fixes"
+  ]
+}
+```
+
 ## Additional Notes
 
 - Ensure your app has permission to access the internet, write to external storage, and request package installation to allow seamless updates.
